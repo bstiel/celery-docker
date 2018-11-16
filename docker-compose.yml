@@ -9,6 +9,20 @@ services:
       - MINIO_HOST=minio:9000
       - MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE
       - MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      - NEWSPAPER_URLS=https://www.theguardian.com,https://www.nytimes.com
+      - NEWSPAPER_SCHEDULE=300
+    depends_on:
+      - beat
+      - rabbitmq
+    restart: 'no'
+    volumes: 
+      - ./app:/app
+
+  worker-minio:
+    build: .
+    image: *img
+    command: [celery, worker, --app=worker.app, --pool=gevent, --concurrency=20, --queues=minio, --loglevel=INFO]
+    environment: *env
     depends_on:
       - beat
       - rabbitmq
@@ -35,10 +49,9 @@ services:
     command: server /export
     environment: *env
     ports:
-      - 9000:9000
+      - 80:9000
     volumes:
       - minio:/data
 
 volumes:
   minio:
-    external: True

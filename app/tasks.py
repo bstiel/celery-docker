@@ -36,6 +36,11 @@ def fetch_article(self, url):
     article.parse()
 
     url = urlparse(article.source_url)
+    save_article.s(url.netloc, article.title, article.text).delay()
+
+
+@app.task(bind=True, name='save_article', queue='minio')
+def save_article(self, bucket, key, text):
 
     minio_client = Minio(os.environ['MINIO_HOST'], 
         access_key=os.environ['MINIO_ACCESS_KEY'],
@@ -43,23 +48,23 @@ def fetch_article(self, url):
         secure=False)
 
     try:
-        minio_client.make_bucket(url.netloc, location="us-east-1")
+        minio_client.make_bucket(bucket, location="us-east-1")
     except BucketAlreadyExists:
         pass
     except BucketAlreadyOwnedByYou:
         pass
 
-    hexdigest = hashlib.md5(article.text.encode()).hexdigest()
+    hexdigest = hashlib.md5(text.encode()).hexdigest()
     try:
-        st = minio_client.stat_object(url.netloc, article.title)
-        update = True if not st else st.etag != hexdigest
+        st = minio_client.stat_object(bucket, key)
+        update = st.etag != hexdigest
     except NoSuchKey as err:
         update = True
 
     if update:
-        logger.info(f'Write {article.source_url} to minio')
-        stream = BytesIO(article.text.encode())
-        minio_client.put_object(url.netloc, article.title, stream, stream.getbuffer().nbytes)
+        logger.info(f'Write {bucket}/{key} to minio')
+        stream = BytesIO(text.encode())
+        minio_client.put_object(bucket, key, stream, stream.getbuffer().nbytes)
 
   
     
