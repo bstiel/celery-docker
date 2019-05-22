@@ -1,57 +1,32 @@
 version: '3.4'
 services:
-  worker:
+
+  app:
     build: .
-    image: &img worker
-    command: [celery, worker, --app=worker.app, --pool=gevent, --concurrency=20, --loglevel=INFO]
+    image: &img app
+    command: ["python", "app.py"]
     environment: &env
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672
-      - MINIO_HOST=minio:9000
-      - MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE
-      - MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-      - NEWSPAPER_URLS=https://www.theguardian.com,https://www.nytimes.com
-      - NEWSPAPER_SCHEDULE=300
+      - FLASK_ENV=development
     depends_on:
-      - beat
       - rabbitmq
     restart: 'no'
+    ports:
+      - 8000:8000
     volumes: 
       - ./app:/app
 
-  worker-minio:
-    build: .
+  worker:
     image: *img
-    command: [celery, worker, --app=worker.app, --pool=gevent, --concurrency=20, --queues=minio, --loglevel=INFO]
+    command: [celery, worker, --app=worker.app, --pool=prefork, --concurrency=1, --loglevel=INFO]
     environment: *env
     depends_on:
-      - beat
-      - rabbitmq
-    restart: 'no'
-    volumes: 
-      - ./app:/app
-
-  beat:
-    build: .
-    image: *img
-    command: [celery, beat, --app=worker.app, --loglevel=INFO]
-    environment: *env
-    depends_on: 
       - rabbitmq
     restart: 'no'
     volumes: 
       - ./app:/app
 
   rabbitmq:
-    image: rabbitmq:3.7.8
-
-  minio:
-    image: minio/minio:RELEASE.2018-11-06T01-01-02Z
-    command: server /export
-    environment: *env
+    image: rabbitmq:3.7.14-management
     ports:
-      - 80:9000
-    volumes:
-      - minio:/data
-
-volumes:
-  minio:
+      - 15672:15672
