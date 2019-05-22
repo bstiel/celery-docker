@@ -44,7 +44,7 @@ def pool(worker):
         elif new_concurrency > current_concurrency:
             control.pool_grow(n=new_concurrency-current_concurrency, destination=[worker])
         elif new_concurrency < current_concurrency:
-            control.pool_grow(n=current_concurrency-new_concurrency, destination=[worker])
+            control.pool_shrink(n=current_concurrency-new_concurrency, destination=[worker])
         return '', 201
 
     # DELETE => restart pool
