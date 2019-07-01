@@ -1,7 +1,6 @@
 version: '3.4'
 services:
   worker:
-    build: .
     image: &img worker
     command: [celery, worker, --app=worker.app, --pool=gevent, --concurrency=20, --loglevel=INFO]
     environment: &env
@@ -14,10 +13,11 @@ services:
     depends_on:
       - beat
       - rabbitmq
-    restart: 'no'
+    deploy:
+      restart_policy:
+        condition: 'none'
 
   worker-minio:
-    build: .
     image: *img
     command: [celery, worker, --app=worker.app, --pool=gevent, --concurrency=20, --queues=minio, --loglevel=INFO]
     environment: *env
@@ -25,16 +25,19 @@ services:
       - beat
       - rabbitmq
       - minio
-    restart: 'no'
+    deploy:
+      restart_policy:
+        condition: 'none'
 
   beat:
-    build: .
     image: *img
     command: [celery, beat, --app=worker.app, --loglevel=INFO]
     environment: *env
     depends_on: 
       - rabbitmq
-    restart: 'no'
+    deploy:
+      restart_policy:
+        condition: 'none'
 
   rabbitmq:
     image: rabbitmq:3.7.8
@@ -47,6 +50,9 @@ services:
       - 80:9000
     volumes:
       - minio:/data
+    deploy:
+      placement:
+        constraints: [node.role == manager]
 
 volumes:
   minio:
