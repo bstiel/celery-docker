@@ -15,8 +15,6 @@ services:
       - beat
       - rabbitmq
     restart: 'no'
-    volumes: 
-      - ./app:/app
 
   worker-minio:
     build: .
@@ -27,8 +25,6 @@ services:
       - beat
       - rabbitmq
     restart: 'no'
-    volumes: 
-      - ./app:/app
 
   beat:
     build: .
@@ -38,8 +34,6 @@ services:
     depends_on: 
       - rabbitmq
     restart: 'no'
-    volumes: 
-      - ./app:/app
 
   rabbitmq:
     image: rabbitmq:3.7.8
